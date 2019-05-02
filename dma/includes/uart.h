@@ -1,3 +1,4 @@
+
 /*
  * uart.h
  *
@@ -8,36 +9,29 @@
 #ifndef INCLUDES_UART_H_
 #define INCLUDES_UART_H_
 
-
-
-
-#define INTERRUPTS 1
-/**
- * @file    MKL25Z128xxx4_Project_UART_Srinath_Amogh.c
- * @brief   Application entry point.
- */
-#include <stdio.h>
-#include "board.h"
-#include "peripherals.h"
-#include "pin_mux.h"
-#include "clock_config.h"
+/***************************************************************************************
+*                          HEADERS & MACROS                                            *
+***************************************************************************************/
 #include "MKL25Z4.h"
-#include "fsl_debug_console.h"
+#include <stdio.h>
+#define POLLING 1
 
+/***************************************************************************************
+*                          GLOBAL VARIABLES                                            *
+***************************************************************************************/
+extern int count[256];
+extern char report_charac[256];
+extern int character_entred_flag;
+extern int GPIO_flag;
 
-
-
-
-
-
-
-
-
+/***************************************************************************************
+*                          FUNCTION PROTOTYPES                                         *
+***************************************************************************************/
 void interrupt_enable();
 void uart_init();
 void getch();
 void putstr(char *ch);
 void putch(data_poll);
 
-
 #endif /* INCLUDES_UART_H_ */
+

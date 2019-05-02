@@ -1,78 +1,155 @@
-/*
- * Copyright 2016-2018 NXP
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * o Redistributions of source code must retain the above copyright notice, this list
- *   of conditions and the following disclaimer.
- *
- * o Redistributions in binary form must reproduce the above copyright notice, this
- *   list of conditions and the following disclaimer in the documentation and/or
- *   other materials provided with the distribution.
- *
- * o Neither the name of NXP Semiconductor, Inc. nor the names of its
- *   contributors may be used to endorse or promote products derived from this
- *   software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
- 
 /**
  * @file    DMA.c
  * @brief   Application entry point.
  */
+
+/***************************************************************************************
+ *                          HEADER FILES                                                *
+ ***************************************************************************************/
 #include <stdio.h>
+#include <math.h>
 #include "board.h"
 #include "peripherals.h"
 #include "pin_mux.h"
 #include "clock_config.h"
 #include "MKL25Z4.h"
 #include "fsl_debug_console.h"
-
 #include "../dma/includes/uart.h"
 #include "../dma/includes/adc.h"
-/* TODO: insert other include files here. */
+#include "../dma/includes/dma.h"
 
-/* TODO: insert other definitions and declarations here. */
+/***************************************************************************************
+ *                          GLOBAL VARIABLES                                            *
+ ***************************************************************************************/
+int8_t str[20];
+int8_t str1[20];
+int8_t str2[50];
 
-/*
- * @brief   Application entry point.
- */
 int main(void) {
 
-  	/* Init board hardware. */
-    BOARD_InitBootPins();
-    BOARD_InitBootClocks();
-    BOARD_InitBootPeripherals();
-  	/* Init FSL debug console. */
-    BOARD_InitDebugConsole();
+	/* Init board hardware. */
+	BOARD_InitBootPins();
+	BOARD_InitBootClocks();
+	BOARD_InitBootPeripherals();
+	/* Init FSL debug console. */
+	BOARD_InitDebugConsole();
 
-    PRINTF("Hello World\n");
+	// Initialize
+	adc_init();
+ 	dma_init();
 
-    adc_init();
-    dma_init();
+	extern uint8_t dma_interrupt_flag;
+	extern uint8_t flag;
+	extern uint32_t buffer1[256];
+	extern uint16_t data_buff[256];
+	extern uint32_t double_buff1;
+	extern uint32_t double_buff2;
+    extern bool buff_check_flag;
+    float max;
+	float max1 = 0;
+	float alpha = 0.5;
+	float j;
+	int i;
+	int k,m;
+    float dBFS_value[66];
+	float x;
 
-    //	uart_init();
 
-    /* Force the counter to be placed into memory. */
-    volatile static int i = 0 ;
-    /* Enter an infinite loop, just incrementing a counter. */
-    while(1)
-    {
-    	//uint32_t adc_value_read = adc_read_polling();
-    	//PRINTF("ADC reading: %d\n", adc_value_read);
-        i++ ;
-    }
-    return 0 ;
+
+
+	for(i = 0 , j = 500; i<= 66 && j <= 65500;i++, j= j+1000)
+	{
+		dBFS_value[i] = (20 *( log10(j/32768)));
+
+	}
+
+
+
+
+//	SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
+//	PORTB->PCR[11] |= PORT_PCR_MUX(0x1);
+//	GPIOB->PDDR |= 0x800;
+
+//	while(1)
+//		{
+//			PRINTF("\n\r in main");
+//			if(flag == 1)
+//			{
+//				PRINTF("\n \r pin set");
+//				flag =0;
+//				GPIOB->PSOR |= 0x800;
+//			}
+//		}
+
+	while(1)
+	{
+
+		if(flag == 1)
+		{
+			flag =0;
+			GPIOB->PSOR |= 0x800;
+		}
+
+		if(dma_interrupt_flag ==1)
+		{
+
+			max=0;
+			dma_interrupt_flag =0;
+
+			if(buff_check_flag == 0)
+			{
+				buff_check_flag =1;
+				for (int i = 0; i< 128; i++)
+				{
+
+					if (max < data_buff[double_buff2+i])
+					{
+						max = data_buff[double_buff2+i];
+					}
+
+					sprintf(str,"\n \r arr val %d: %d",i,data_buff[double_buff2+i]);
+					putst(str);
+				}
+			}
+			else if(buff_check_flag == 1)
+			{
+				buff_check_flag =0;
+				for (int i = 0; i< 128; i++)
+				{
+
+					if (max < data_buff[double_buff1+i])
+					{
+						max = data_buff[double_buff1+i];
+					}
+
+					sprintf(str,"\n \r arr val %d: %d",i,data_buff[double_buff1+i]);
+					putst(str);
+				}
+			}
+			if ( max1 < max)
+			{
+				max1 = max;
+			}
+
+			else
+			{
+				max1 =  alpha * max1;
+			}
+
+			sprintf(str1,"\n \r Peak value :  %d",(uint16_t)max1);
+			putst(str1);
+
+			for(m = 0, k = 1000; m<=66 && k < 66000; m++,k = k+1000)
+			{
+				if(max1< k)
+				{
+					sprintf(str2,"\n\rdBFS value corresponding to the peak value: %f" , dBFS_value[m]);
+					putst(str2);
+					break;
+				}
+
+			}
+		}
+	}
+	return 0 ;
 }
